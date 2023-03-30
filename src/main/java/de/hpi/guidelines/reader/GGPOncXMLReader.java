@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.ConsoleHandler;
@@ -20,9 +22,11 @@ import javax.xml.bind.JAXBException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.poi.hpsf.Array;
 import org.apache.uima.UIMAException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import de.hpi.guidelines.tools.GGPOncJAXBXMLHandler;
@@ -70,7 +74,7 @@ public class GGPOncXMLReader {
 	}
 
 	public static void main(String[] args) throws Exception {
-		String importFile = args[0];
+		String importFile = args.length > 0 ? args[0] : Paths.get("src", "main", "resources", "cpg-corpus-cms.xml").toString();
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 		Document doc = dBuilder.parse(new File(importFile));
@@ -101,6 +105,23 @@ public class GGPOncXMLReader {
 		StringBuilder fullTokens = new StringBuilder();
 
 		StringBuilder stats = new StringBuilder();
+		
+		StringBuilder metadata = new StringBuilder();
+		
+		metadata.append("file").append("\t").
+				 append("guideline_id").append("\t").
+				 append("name").append("\t").
+				 append("sections").append("\t").
+				 append(GGPOncMetaData.NUMBER).append("\t").
+				 append(GGPOncMetaData.REC).append("\t").
+				 append(GGPOncMetaData.RECOMMENDATION_CREATION_DATE).append("\t").
+				 append(GGPOncMetaData.EDIT_STATE).append("\t").
+				 append(GGPOncMetaData.RECOMMENDATION_GRADE).append("\t").
+				 append(GGPOncMetaData.TYPE_OF_RECOMMENDATION).append("\t").
+				 append(GGPOncMetaData.STRENGTH_OF_CONSENSUS).append("\t").
+				 append(GGPOncMetaData.LEVEL_OF_EVIDENCES).append("\t").
+				 append(GGPOncMetaData.EXPERT_OPINION).append("\t").
+				 append(GGPOncMetaData.VOTE).append("\n");
 
 		stats.append("name").append(";").
 			append("num_docs").append(";").
@@ -120,6 +141,7 @@ public class GGPOncXMLReader {
 		int[] num_rec_tokens = new int[n];
 		int[] num_sentences = new int[n];
 		int[] num_tokens = new int[n];
+		int[] num_docs = new int[n];
 		int[] num_litrefs = new int[n];
 		SortedSet<String> all_types = new TreeSet<>();
 		SortedSet<String> all_rec_types = new TreeSet<>();
@@ -137,7 +159,6 @@ public class GGPOncXMLReader {
 
 			NodeList recommendations = cpgDoc.getElementsByTagName("recommendation");
 
-			num_recommendations[i] = recommendations.getLength();
 			num_litrefs[i] = cpgDoc.getElementsByTagName("litref").getLength();
 
 			Pattern p = Pattern.compile("(###.*|.*###)"); // Removing headings
@@ -153,7 +174,8 @@ public class GGPOncXMLReader {
 
 			for (int j = 0; j < recommendations.getLength(); j++) {
 				Element elem = (Element) recommendations.item(j);
-				String text = elem.getElementsByTagName("text").item(0).getTextContent().trim();
+				Node textNode = elem.getElementsByTagName("text").item(0);
+				String text = textNode.getTextContent().trim();
 
 				Matcher m = p.matcher(text);
 
@@ -180,6 +202,7 @@ public class GGPOncXMLReader {
 
 				num_rec_sentences[i] += textAnnotation.getSentencesAnnotation().size();
 				num_rec_tokens[i] += textAnnotation.getTokenAnnotation().size();
+				num_recommendations[i]++;
 
 				for (StandOffToken soToken : textAnnotation.getTokenAnnotation())
 					rec_types.addAll(Arrays.asList(soToken.getTokenString().replaceAll("[^äöüßÄÖÜ\\w\\d]", "")));
@@ -195,7 +218,7 @@ public class GGPOncXMLReader {
 			for (int j = 0; j < all_text.getLength(); j++) {
 				Element elem = (Element) all_text.item(j);
 				String text = elem.getTextContent().trim();
-
+				
 				Matcher m = p.matcher(text);
 
 				while (m.find())
@@ -209,18 +232,42 @@ public class GGPOncXMLReader {
 					continue;
 				}
 
-				Files.write(Paths.get(dirTXT + getFileName(i, j, id)), text.getBytes("UTF-8"));
-				Files.write(Paths.get(outDirTXTfilesAll.toString(), getFileName(i, j, id)), text.getBytes("UTF-8"));
+				String fileName = getFileName(i, j, id);
+				
+				GGPOncMetaData mdExtractor = new GGPOncMetaData();
+				
+				Map<String, String> metadataElements = mdExtractor.getMetaData(elem);
+				List<String> structure = mdExtractor.findStructure(elem);
+				String gl_id = structure.remove(0);
+				
+				metadata.append(fileName.replace(".txt", "")).append("\t").
+					 append(gl_id).append("\t").
+					 append(name).append("\t").
+					 append(String.join(";", structure)).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.NUMBER, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.REC, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.RECOMMENDATION_CREATION_DATE, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.EDIT_STATE, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.RECOMMENDATION_GRADE, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.TYPE_OF_RECOMMENDATION, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.STRENGTH_OF_CONSENSUS, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.LEVEL_OF_EVIDENCES, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.EXPERT_OPINION, "")).append("\t").
+					 append(metadataElements.getOrDefault(GGPOncMetaData.VOTE, "")).append("\n");
+				
+				Files.write(Paths.get(dirTXT + fileName), text.getBytes("UTF-8"));
+				Files.write(Paths.get(outDirTXTfilesAll.toString(), fileName), text.getBytes("UTF-8"));
 
 				TextAnnotation textAnnotation = GetSentencesTokensFraMed.runPipeline(text, id + "_" + j);
 				annotatedCorpus.add(textAnnotation);
 				String sent = GetSentencesTokensFraMed.getSentences();
-				Files.write(Paths.get(outDirSENTfiles.toString(), getFileName(i, j, id)), sent.getBytes("UTF-8"));
+				Files.write(Paths.get(outDirSENTfiles.toString(), fileName), sent.getBytes("UTF-8"));
 				String token = GetSentencesTokensFraMed.getTokens();
-				Files.write(Paths.get(outDirTOKfiles.toString(), getFileName(i, j, id)), token.getBytes("UTF-8"));
+				Files.write(Paths.get(outDirTOKfiles.toString(), fileName), token.getBytes("UTF-8"));
 
 				num_sentences[i] += textAnnotation.getSentencesAnnotation().size();
 				num_tokens[i] += textAnnotation.getTokenAnnotation().size();
+				num_docs[i]++;
 
 				for (StandOffToken soToken : textAnnotation.getTokenAnnotation())
 					types.addAll(Arrays.asList(soToken.getTokenString().replaceAll("[^äöüßÄÖÜ\\w\\d]", "")));
@@ -235,7 +282,7 @@ public class GGPOncXMLReader {
 			all_rec_types.addAll(rec_types);
 
 			stats.append(name).append(";").
-				append(all_text.getLength()).append(";").
+				append(num_docs[i]).append(";").
 				append(num_recommendations[i]).append(";").
 				append(num_rec_sentences[i]).append(";").
 				append(num_rec_tokens[i]).append(";").
@@ -267,6 +314,8 @@ public class GGPOncXMLReader {
 		writeTextToFile(new StringBuilder(String.join("\n", all_types)), "cpg-types.txt");
 
 		writeTextToFile(removedHeadings, "removed-headings.txt");
+		
+		Files.write(output.resolve("metadata_index.tsv"), metadata.toString().getBytes("UTF-8"));		
 
 		writeTextToFile(stats, "cpg-stats.csv");
 		writeTextToFile(fullText, "cpg-text.txt");
@@ -280,7 +329,7 @@ public class GGPOncXMLReader {
 		writeAnno("cpg-rec-annotations.xml", rec_annotatedCorpus);
 		writeAnno("cpg-annotations.xml", annotatedCorpus);
 	}
-
+	
 	private static int sum(int[] values) {
 		int sum = 0;
 		for (int i = 0; i < values.length; i++)
