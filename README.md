@@ -1,4 +1,4 @@
-GGPONC - A Corpus of German Medical Text with Rich Metadata Based on Clinical Practice Guidelines
+GGPONC 1.0 - Pre-Processing and Basic Analysis
 =================================================================================================
 
 This repository contains the code to reproduce the results in:
