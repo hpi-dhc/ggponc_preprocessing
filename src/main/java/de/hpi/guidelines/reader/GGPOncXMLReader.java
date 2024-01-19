@@ -251,7 +251,7 @@ public class GGPOncXMLReader {
 					 append(metadataElements.getOrDefault(GGPOncMetaData.RECOMMENDATION_GRADE, "")).append("\t").
 					 append(metadataElements.getOrDefault(GGPOncMetaData.TYPE_OF_RECOMMENDATION, "")).append("\t").
 					 append(metadataElements.getOrDefault(GGPOncMetaData.STRENGTH_OF_CONSENSUS, "")).append("\t").
-					 append(metadataElements.getOrDefault(GGPOncMetaData.LEVEL_OF_EVIDENCES, "")).append("\t").
+					 append(metadataElements.getOrDefault("loe", "")).append("\t").
 					 append(metadataElements.getOrDefault(GGPOncMetaData.EXPERT_OPINION, "")).append("\t").
 					 append(metadataElements.getOrDefault(GGPOncMetaData.VOTE, "")).append("\n");
 				
