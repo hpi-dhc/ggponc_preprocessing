@@ -124,6 +124,8 @@ public class GGPOncXMLReader {
 				 append(GGPOncMetaData.VOTE).append("\n");
 
 		stats.append("name").append(";").
+			append("version").append(";").
+			append("date").append(";").
 			append("num_docs").append(";").
 			append("num_recommendations").append(";").
 			append("num_rec_sentences").append(";").
@@ -149,6 +151,9 @@ public class GGPOncXMLReader {
 		for (int i = 0; i < n; i++) {
 			Element cpgDoc = (Element)cpgDocs.item(i);
 			String name = cpgDoc.getElementsByTagName("name").item(0).getTextContent().trim();
+			String version = cpgDoc.getAttribute("version");
+			System.out.println("Version: " + version);
+			String date = cpgDoc.getAttribute("date");
 			String id = name.replace(" ", "-").toLowerCase().replace("ä", "ae").
 					replace("ö", "oe").
 					replace("ü", "ue").
@@ -282,6 +287,8 @@ public class GGPOncXMLReader {
 			all_rec_types.addAll(rec_types);
 
 			stats.append(name).append(";").
+				append(version).append(";").
+				append(date).append(";").
 				append(num_docs[i]).append(";").
 				append(num_recommendations[i]).append(";").
 				append(num_rec_sentences[i]).append(";").
@@ -299,7 +306,7 @@ public class GGPOncXMLReader {
 			fullText_temp.delete(0, fullText_temp.length());
 		}
 
-		stats.append("Sum").append(";").
+		stats.append("Sum").append(";").append(";").append(";").
 			append(annotatedCorpus.size()).append(";").
 			append(sum(num_recommendations)).append(";").
 			append(sum(num_rec_sentences)).append(";").
